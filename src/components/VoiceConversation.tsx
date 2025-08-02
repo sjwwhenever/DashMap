@@ -19,7 +19,8 @@ interface TranscriptMessage {
 }
 
 export default function VoiceConversation({ apiKey }: VoiceConversationProps) {
-  const [selectedAgent, setSelectedAgent] = useState<string>('');
+  const defaultAgentId = process.env.NEXT_PUBLIC_DEFAULT_AGENT_ID || 'agent_6801k1n9q1wae3ys563vw28geswj';
+  const [selectedAgent, setSelectedAgent] = useState<string>(defaultAgentId);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [transcriptMessages, setTranscriptMessages] = useState<TranscriptMessage[]>([]);
   const [isListening, setIsListening] = useState(false);
@@ -64,7 +65,9 @@ export default function VoiceConversation({ apiKey }: VoiceConversationProps) {
       try {
         const agentList = await api.getAgents();
         setAgents(agentList);
-        if (agentList.length > 0) {
+        // Keep the default agent if it exists in the list, otherwise use first available
+        const defaultAgentExists = agentList.some(agent => agent.agent_id === defaultAgentId);
+        if (!defaultAgentExists && agentList.length > 0) {
           setSelectedAgent(agentList[0].agent_id);
         }
       } catch (error) {
