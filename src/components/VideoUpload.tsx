@@ -9,9 +9,13 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
   onUploadComplete,
   onUploadError,
   onUploadProgress,
+  onTranscriptionComplete,
+  onTranscriptionError,
+  onProcessingStatusChange,
   acceptedFormats = ['video/*'],
   maxFileSize = 500 * 1024 * 1024, // 500MB
   multiple = true,
+  autoTranscribe = true,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadMetadata, setUploadMetadata] = useState<{
@@ -26,6 +30,7 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
 
   const {
     uploadState,
+    transcriptionState,
     previews,
     dragState,
     uploadVideo,
@@ -43,11 +48,19 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
     result,
     isDragging,
     hasFiles,
+    isProcessing,
+    transcription,
+    transcriptionError,
+    processingStatus,
   } = useVideoUpload({
     onUploadComplete,
     onUploadError,
     onUploadProgress,
+    onTranscriptionComplete,
+    onTranscriptionError,
+    onProcessingStatusChange,
     maxFileSize,
+    autoTranscribe,
   });
 
   const handleUploadClick = () => {
@@ -286,6 +299,42 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
             </div>
           )}
 
+          {/* Processing Status */}
+          {isProcessing && (
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-blue-400 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <div>
+                  <p className="text-blue-700 font-medium">
+                    {processingStatus === 'processing' && 'Processing video...'}
+                    {processingStatus === 'transcribing' && 'Getting transcription...'}
+                    {processingStatus === 'completed' && 'Processing complete!'}
+                  </p>
+                  <p className="text-blue-600 text-sm mt-1">
+                    This may take a few minutes depending on video length.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Transcription Error */}
+          {transcriptionError && (
+            <div className="bg-orange-50 border border-orange-200 rounded-md p-4 mb-6">
+              <div className="flex">
+                <svg className="w-5 h-5 text-orange-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-orange-700 font-medium">Transcription Error</p>
+                  <p className="text-orange-600 text-sm mt-1">{transcriptionError}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Success Message */}
           {result && (
             <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-6">
@@ -296,14 +345,39 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
                 <div>
                   <p className="text-green-700 font-medium">Upload successful!</p>
                   <p className="text-green-600 text-sm mt-1">
-                    Video ID: {result.id}
+                    Video ID: <code className="bg-green-100 px-1 rounded">{result.data?.videoNo || 'N/A'}</code>
                   </p>
-                  {result.url && (
+                  <p className="text-green-600 text-sm">
+                    Status: {result.data?.videoStatus || 'Unknown'}
+                  </p>
+                  {autoTranscribe && (
                     <p className="text-green-600 text-sm">
-                      URL: {result.url}
+                      {isProcessing ? 'Processing for transcription...' : 'Transcription will be available after processing.'}
                     </p>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Transcription Results */}
+          {transcription && (
+            <div className="bg-gray-50 border border-gray-200 rounded-md p-4 mb-6">
+              <h4 className="text-gray-900 font-medium mb-3">Transcription Results</h4>
+              <div className="space-y-3">
+                {transcription.data.transcriptions.map((segment, index) => (
+                  <div key={index} className="bg-white rounded p-3 border">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs text-gray-500">
+                        {segment.startTime}s - {segment.endTime}s
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        Segment {segment.index + 1}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-800">{segment.content}</p>
+                  </div>
+                ))}
               </div>
             </div>
           )}

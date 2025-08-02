@@ -5,6 +5,7 @@ import {
   UploadState,
   VideoUploadRequest,
   VideoUploadResponse,
+  VideoTranscriptionResponse,
   UploadProgress,
   DragDropState,
   VideoPreview,
@@ -15,8 +16,12 @@ interface UseVideoUploadOptions {
   onUploadComplete?: (result: VideoUploadResponse) => void;
   onUploadError?: (error: string) => void;
   onUploadProgress?: (progress: UploadProgress) => void;
+  onTranscriptionComplete?: (transcription: VideoTranscriptionResponse) => void;
+  onTranscriptionError?: (error: string) => void;
+  onProcessingStatusChange?: (status: 'uploading' | 'processing' | 'transcribing' | 'completed' | 'error') => void;
   maxFileSize?: number;
   acceptedFormats?: string[];
+  autoTranscribe?: boolean;
 }
 
 export function useVideoUpload(options: UseVideoUploadOptions = {}) {
@@ -25,6 +30,18 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
     progress: null,
     error: null,
     result: null,
+  });
+
+  const [transcriptionState, setTranscriptionState] = useState<{
+    isProcessing: boolean;
+    transcription: VideoTranscriptionResponse | null;
+    error: string | null;
+    status: 'idle' | 'processing' | 'transcribing' | 'completed' | 'error';
+  }>({
+    isProcessing: false,
+    transcription: null,
+    error: null,
+    status: 'idle',
   });
 
   const [previews, setPreviews] = useState<VideoPreview[]>([]);
@@ -41,6 +58,12 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
       progress: null,
       error: null,
       result: null,
+    });
+    setTranscriptionState({
+      isProcessing: false,
+      transcription: null,
+      error: null,
+      status: 'idle',
     });
   }, []);
 
@@ -90,6 +113,64 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
     setPreviews([]);
   }, [previews]);
 
+  const startTranscription = useCallback(async (videoNo: string) => {
+    setTranscriptionState(prev => ({
+      ...prev,
+      isProcessing: true,
+      status: 'processing',
+      error: null,
+    }));
+    
+    options.onProcessingStatusChange?.('processing');
+
+    try {
+      // Poll for video processing completion
+      const statusResponse = await apiClient.current.pollVideoStatus(videoNo);
+      
+      if (!statusResponse.success) {
+        throw new Error(statusResponse.error || 'Failed to check video status');
+      }
+
+      if (statusResponse.data === 'PARSE') {
+        // Video is processed, get transcription
+        setTranscriptionState(prev => ({
+          ...prev,
+          status: 'transcribing',
+        }));
+        options.onProcessingStatusChange?.('transcribing');
+
+        const transcriptionResponse = await apiClient.current.getVideoTranscription(videoNo);
+        
+        if (transcriptionResponse.success && transcriptionResponse.data) {
+          setTranscriptionState(prev => ({
+            ...prev,
+            isProcessing: false,
+            transcription: transcriptionResponse.data || null,
+            status: 'completed',
+          }));
+          
+          options.onTranscriptionComplete?.(transcriptionResponse.data);
+          options.onProcessingStatusChange?.('completed');
+        } else {
+          throw new Error(transcriptionResponse.error || 'Failed to get transcription');
+        }
+      } else {
+        throw new Error('Video processing failed');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Transcription failed';
+      setTranscriptionState(prev => ({
+        ...prev,
+        isProcessing: false,
+        error: errorMessage,
+        status: 'error',
+      }));
+      
+      options.onTranscriptionError?.(errorMessage);
+      options.onProcessingStatusChange?.('error');
+    }
+  }, [options]);
+
   const uploadVideo = useCallback(async (
     file: File,
     title?: string,
@@ -133,7 +214,21 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
           isUploading: false,
           result: response.data || null,
         }));
+        
         options.onUploadComplete?.(response.data);
+        
+        // Debug logging for videoNo extraction
+        console.log('Checking for videoNo in response.data:', response.data);
+        console.log('response.data.data:', response.data?.data);
+        console.log('response.data.data.videoNo:', response.data?.data?.videoNo);
+        
+        // Automatically start transcription if enabled and we have a videoNo
+        if (options.autoTranscribe !== false && response.data?.data?.videoNo) {
+          console.log('Starting transcription for videoNo:', response.data.data.videoNo);
+          await startTranscription(response.data.data.videoNo);
+        } else if (options.autoTranscribe !== false) {
+          console.warn('Auto-transcription enabled but no videoNo found in response');
+        }
       } else {
         const error = response.error || 'Upload failed';
         setUploadState(prev => ({
@@ -152,7 +247,7 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
       }));
       options.onUploadError?.(errorMessage);
     }
-  }, [options]);
+  }, [options, startTranscription]);
 
   const uploadMultipleVideos = useCallback(async (
     files: File[],
@@ -218,12 +313,14 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
   return {
     // State
     uploadState,
+    transcriptionState,
     previews,
     dragState,
     
     // Actions
     uploadVideo,
     uploadMultipleVideos,
+    startTranscription,
     addFiles,
     removePreview,
     clearPreviews,
@@ -243,5 +340,11 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
     result: uploadState.result,
     isDragging: dragState.isDragging,
     hasFiles: previews.length > 0,
+    
+    // Transcription computed values
+    isProcessing: transcriptionState.isProcessing,
+    transcription: transcriptionState.transcription,
+    transcriptionError: transcriptionState.error,
+    processingStatus: transcriptionState.status,
   };
 }

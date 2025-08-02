@@ -12,15 +12,18 @@ export interface VideoUploadRequest {
   title?: string;
   description?: string;
   tags?: string[];
+  callback?: string;
 }
 
 export interface VideoUploadResponse {
-  id: string;
-  url: string;
-  uploadUrl?: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  createdAt: string;
-  updatedAt: string;
+  code: string;
+  msg: string;
+  data: {
+    videoNo: string;
+    videoName: string;
+    videoStatus: 'PARSE' | 'UNPARSE' | 'FAIL';
+    uploadTime: string;
+  };
 }
 
 // Upload Progress Types
@@ -106,9 +109,13 @@ export interface VideoUploadProps {
   onUploadComplete?: (result: VideoUploadResponse) => void;
   onUploadError?: (error: string) => void;
   onUploadProgress?: (progress: UploadProgress) => void;
+  onTranscriptionComplete?: (transcription: VideoTranscriptionResponse) => void;
+  onTranscriptionError?: (error: string) => void;
+  onProcessingStatusChange?: (status: 'uploading' | 'processing' | 'transcribing' | 'completed' | 'error') => void;
   acceptedFormats?: string[];
   maxFileSize?: number;
   multiple?: boolean;
+  autoTranscribe?: boolean;
 }
 
 // Drag and Drop Types
@@ -125,4 +132,30 @@ export interface VideoPreview {
   size: number;
   type: string;
   duration?: number;
+}
+
+// Callback Notification Types
+export interface CallbackNotification {
+  videoNo: string;
+  clientId: string;
+  status: 'PARSE' | 'UNPARSE' | 'FAIL';
+}
+
+// Video Transcription Types
+export interface TranscriptionSegment {
+  index: number;
+  content: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface VideoTranscriptionResponse {
+  code: string;
+  msg: string;
+  data: {
+    videoNo: string;
+    transcriptions: TranscriptionSegment[];
+  };
+  success: boolean;
+  failed: boolean;
 }

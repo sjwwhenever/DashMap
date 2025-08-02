@@ -2,10 +2,12 @@
 
 import React, { useState } from 'react';
 import VideoUpload from '@/components/VideoUpload';
-import { VideoUploadResponse, VideoMetadata } from '@/types/memories';
+import { VideoUploadResponse, VideoTranscriptionResponse } from '@/types/memories';
 
 export default function HomePage() {
   const [uploadResults, setUploadResults] = useState<VideoUploadResponse[]>([]);
+  const [transcriptions, setTranscriptions] = useState<{[videoNo: string]: VideoTranscriptionResponse}>({});
+  const [processingStatus, setProcessingStatus] = useState<{[videoNo: string]: string}>({});
   const [showApiInfo, setShowApiInfo] = useState(false);
 
   const handleUploadComplete = (result: VideoUploadResponse) => {
@@ -19,6 +21,23 @@ export default function HomePage() {
 
   const handleUploadProgress = (progress: any) => {
     console.log('Upload progress:', progress);
+  };
+
+  const handleTranscriptionComplete = (transcription: VideoTranscriptionResponse) => {
+    console.log('Transcription completed:', transcription);
+    setTranscriptions(prev => ({
+      ...prev,
+      [transcription.data.videoNo]: transcription
+    }));
+  };
+
+  const handleTranscriptionError = (error: string) => {
+    console.error('Transcription error:', error);
+  };
+
+  const handleProcessingStatusChange = (status: string) => {
+    console.log('Processing status changed:', status);
+    // For now, we'll track overall status. In a real app, you might want to track per video
   };
 
   return (
@@ -107,8 +126,12 @@ export default function HomePage() {
           onUploadComplete={handleUploadComplete}
           onUploadError={handleUploadError}
           onUploadProgress={handleUploadProgress}
+          onTranscriptionComplete={handleTranscriptionComplete}
+          onTranscriptionError={handleTranscriptionError}
+          onProcessingStatusChange={handleProcessingStatusChange}
           multiple={true}
           maxFileSize={500 * 1024 * 1024} // 500MB
+          autoTranscribe={true}
         />
 
         {/* Upload Results */}
@@ -121,41 +144,72 @@ export default function HomePage() {
                 </h3>
                 
                 <div className="space-y-4">
-                  {uploadResults.map((result, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="font-medium text-gray-900">
-                            Video {index + 1}
-                          </h4>
-                          <p className="text-sm text-gray-600">ID: {result.id}</p>
+                  {uploadResults.map((result, index) => {
+                    const videoNo = result.data?.videoNo;
+                    const transcription = videoNo ? transcriptions[videoNo] : null;
+                    
+                    return (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h4 className="font-medium text-gray-900">
+                              {result.data?.videoName || `Video ${index + 1}`}
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              Video ID: <code className="bg-gray-100 px-1 rounded">{videoNo || 'N/A'}</code>
+                            </p>
+                          </div>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            result.data?.videoStatus === 'PARSE' ? 'bg-green-100 text-green-800' :
+                            result.data?.videoStatus === 'UNPARSE' ? 'bg-yellow-100 text-yellow-800' :
+                            result.data?.videoStatus === 'FAIL' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {result.data?.videoStatus || 'Unknown'}
+                          </span>
                         </div>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          result.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          result.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
-                          result.status === 'failed' ? 'bg-red-100 text-red-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {result.status}
-                        </span>
-                      </div>
-                      
-                      {result.url && (
-                        <div className="mt-2">
-                          <p className="text-sm text-gray-600">
-                            URL: <a href={result.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
-                              {result.url}
-                            </a>
-                          </p>
+                        
+                        <div className="mt-2 space-y-2">
+                          <div className="text-sm">
+                            <span className="font-medium text-gray-700">Upload Status:</span>
+                            <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                              result.code === '0000' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {result.msg || 'Unknown'}
+                            </span>
+                          </div>
+                          
+                          {result.data?.uploadTime && (
+                            <p className="text-sm text-gray-600">
+                              Upload Time: {new Date(parseInt(result.data.uploadTime)).toLocaleString()}
+                            </p>
+                          )}
                         </div>
-                      )}
-                      
-                      <div className="mt-2 text-xs text-gray-500">
-                        <p>Created: {new Date(result.createdAt).toLocaleString()}</p>
-                        <p>Updated: {new Date(result.updatedAt).toLocaleString()}</p>
+
+                        {/* Transcription Section */}
+                        {transcription && (
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <h5 className="font-medium text-gray-900 mb-2">Transcription</h5>
+                            <div className="space-y-2">
+                              {transcription.data.transcriptions.map((segment, segIndex) => (
+                                <div key={segIndex} className="bg-gray-50 rounded p-3">
+                                  <div className="flex justify-between items-start mb-1">
+                                    <span className="text-xs text-gray-500">
+                                      {segment.startTime}s - {segment.endTime}s
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      Segment {segment.index + 1}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-800">{segment.content}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 
                 <div className="mt-6 pt-4 border-t border-gray-200">
