@@ -12,6 +12,9 @@ class ElevenLabsAPI {
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${ELEVENLABS_API_BASE}${endpoint}`;
     
+    console.log(`🔗 [ElevenLabs API] Making request to: ${url}`);
+    console.log(`🔑 [ElevenLabs API] Using API key: ${this.apiKey.substring(0, 10)}...`);
+    
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -21,11 +24,17 @@ class ElevenLabsAPI {
       },
     });
 
+    console.log(`📡 [ElevenLabs API] Response status: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      throw new Error(`ElevenLabs API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`❌ [ElevenLabs API] Error response:`, errorText);
+      throw new Error(`ElevenLabs API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log(`✅ [ElevenLabs API] Success response:`, data);
+    return data;
   }
 
   async getConversations(filters: ConversationFilters = {}): Promise<ConversationsResponse> {
@@ -45,10 +54,12 @@ class ElevenLabsAPI {
 
   async getAgents(): Promise<Agent[]> {
     try {
+      console.log(`🤖 [ElevenLabs API] Fetching agents...`);
       const response = await this.makeRequest<{ agents: Agent[] }>('/convai/agents');
+      console.log(`🤖 [ElevenLabs API] Found ${response.agents?.length || 0} agents:`, response.agents);
       return response.agents || [];
     } catch (error) {
-      console.error('Failed to fetch agents:', error);
+      console.error('❌ [ElevenLabs API] Failed to fetch agents:', error);
       return [];
     }
   }

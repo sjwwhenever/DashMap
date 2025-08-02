@@ -2,21 +2,21 @@
 
 import { useState, useRef, useCallback } from 'react';
 
-export interface AudioRecorderState {
+export interface PCMAudioRecorderState {
   isRecording: boolean;
   isInitialized: boolean;
   error: string | null;
   audioLevel: number;
 }
 
-export interface UseAudioRecorderReturn extends AudioRecorderState {
+export interface UsePCMAudioRecorderReturn extends PCMAudioRecorderState {
   startRecording: () => Promise<void>;
   stopRecording: () => void;
   initializeRecorder: () => Promise<void>;
   cleanup: () => void;
 }
 
-export const useAudioRecorder = (
+export const usePCMAudioRecorder = (
   onAudioData?: (audioData: ArrayBuffer) => void,
   options: {
     sampleRate?: number;
@@ -24,23 +24,23 @@ export const useAudioRecorder = (
     noiseSuppression?: boolean;
     connectionCheck?: () => boolean;
   } = {}
-): UseAudioRecorderReturn => {
-  const [state, setState] = useState<AudioRecorderState>({
+): UsePCMAudioRecorderReturn => {
+  const [state, setState] = useState<PCMAudioRecorderState>({
     isRecording: false,
     isInitialized: false,
     error: null,
     audioLevel: 0
   });
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataArrayRef = useRef<Uint8Array | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
   const {
-    sampleRate = 44100,
+    sampleRate = 16000,
     echoCancellation = true,
     noiseSuppression = true,
     connectionCheck
@@ -88,23 +88,35 @@ export const useAudioRecorder = (
 
       dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
 
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 16000
-      });
+      // Create script processor for raw PCM data
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+      processorRef.current = processor;
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0 && onAudioData) {
-          // Check if connection is ready before sending audio
-          if (connectionCheck && !connectionCheck()) {
-            console.log('⏳ [AudioRecorder] Connection not ready, skipping audio chunk');
-            return;
-          }
-          event.data.arrayBuffer().then(onAudioData);
+      processor.onaudioprocess = (event) => {
+        if (!state.isRecording) return;
+
+        // Check if connection is ready before sending audio
+        if (connectionCheck && !connectionCheck()) {
+          console.log('⏳ [PCMAudioRecorder] Connection not ready, skipping audio chunk');
+          return;
+        }
+
+        const inputBuffer = event.inputBuffer;
+        const inputData = inputBuffer.getChannelData(0);
+
+        // Convert to 16-bit PCM
+        const pcmData = new Int16Array(inputData.length);
+        for (let i = 0; i < inputData.length; i++) {
+          pcmData[i] = Math.max(-32768, Math.min(32767, inputData[i] * 32767));
+        }
+
+        if (onAudioData) {
+          onAudioData(pcmData.buffer);
         }
       };
 
-      mediaRecorderRef.current = mediaRecorder;
+      source.connect(processor);
+      processor.connect(audioContext.destination);
 
       setState(prev => ({
         ...prev,
@@ -121,25 +133,18 @@ export const useAudioRecorder = (
       }));
       throw error;
     }
-  }, [sampleRate, echoCancellation, noiseSuppression, onAudioData]);
+  }, [sampleRate, echoCancellation, noiseSuppression, onAudioData, connectionCheck, state.isRecording]);
 
   const startRecording = useCallback(async () => {
-    if (!mediaRecorderRef.current || !state.isInitialized) {
+    if (!state.isInitialized) {
       await initializeRecorder();
     }
 
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
-      mediaRecorderRef.current.start(100); // Send data every 100ms
-      setState(prev => ({ ...prev, isRecording: true, error: null }));
-      updateAudioLevel();
-    }
+    setState(prev => ({ ...prev, isRecording: true, error: null }));
+    updateAudioLevel();
   }, [state.isInitialized, initializeRecorder, updateAudioLevel]);
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-    }
-
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
@@ -170,7 +175,7 @@ export const useAudioRecorder = (
       animationFrameRef.current = null;
     }
 
-    mediaRecorderRef.current = null;
+    processorRef.current = null;
     analyserRef.current = null;
     dataArrayRef.current = null;
 
