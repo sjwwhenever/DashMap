@@ -186,27 +186,6 @@ export default function HomePage() {
                           )}
                         </div>
 
-                        {/* Transcription Section */}
-                        {transcription && (
-                          <div className="mt-4 pt-4 border-t border-gray-200">
-                            <h5 className="font-medium text-gray-900 mb-2">Transcription</h5>
-                            <div className="space-y-2">
-                              {transcription.data.transcriptions.map((segment, segIndex) => (
-                                <div key={segIndex} className="bg-gray-50 rounded p-3">
-                                  <div className="flex justify-between items-start mb-1">
-                                    <span className="text-xs text-gray-500">
-                                      {segment.startTime}s - {segment.endTime}s
-                                    </span>
-                                    <span className="text-xs text-gray-500">
-                                      Segment {segment.index + 1}
-                                    </span>
-                                  </div>
-                                  <p className="text-sm text-gray-800">{segment.content}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     );
                   })}

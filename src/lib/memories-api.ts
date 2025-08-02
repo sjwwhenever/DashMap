@@ -201,8 +201,12 @@ class MemoriesApiClient {
     return response;
   }
 
-  async pollVideoStatus(videoNo: string, maxAttempts = 30, intervalMs = 5000): Promise<MemoriesApiResponse<'PARSE' | 'UNPARSE' | 'FAIL'>> {
+  async pollVideoStatus(videoNo: string, maxAttempts = 60, intervalMs = 5000): Promise<MemoriesApiResponse<'PARSE' | 'UNPARSE' | 'FAIL'>> {
     console.log(`Starting video status polling for ${videoNo}, max attempts: ${maxAttempts}, interval: ${intervalMs}ms`);
+    
+    // Initial delay to give video processing time to start
+    console.log('Waiting initial 10 seconds for video processing to start...');
+    await new Promise(resolve => setTimeout(resolve, 10000));
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       console.log(`Polling attempt ${attempt + 1}/${maxAttempts} for video ${videoNo}`);
@@ -228,15 +232,27 @@ class MemoriesApiClient {
         // If transcription fails, video might still be processing
         console.log(`Transcription not ready yet. Error: ${transcriptionResponse.error}`);
         
-        if (transcriptionResponse.error?.includes('not found') || 
-            transcriptionResponse.error?.includes('processing') ||
-            transcriptionResponse.error?.includes('not ready') ||
-            transcriptionResponse.error?.includes('still processing')) {
+        // Check if this is a "video not ready" error that should trigger retry
+        const isProcessingError = transcriptionResponse.error?.includes('not found') || 
+                                 transcriptionResponse.error?.includes('processing') ||
+                                 transcriptionResponse.error?.includes('not ready') ||
+                                 transcriptionResponse.error?.includes('still processing') ||
+                                 transcriptionResponse.error?.includes('status was incorrect') ||
+                                 transcriptionResponse.error?.includes('failed and the video status');
+        
+        if (isProcessingError) {
           // Wait before next attempt
           if (attempt < maxAttempts - 1) {
             console.log(`Video still processing, waiting ${intervalMs}ms before next attempt...`);
             await new Promise(resolve => setTimeout(resolve, intervalMs));
             continue;
+          } else {
+            // Max attempts reached while processing
+            console.error(`Video processing timeout after ${maxAttempts} attempts`);
+            return {
+              success: false,
+              error: 'Video processing is taking longer than expected. Please try again later.',
+            };
           }
         }
         

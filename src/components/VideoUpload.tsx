@@ -313,7 +313,9 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
                     {processingStatus === 'completed' && 'Processing complete!'}
                   </p>
                   <p className="text-blue-600 text-sm mt-1">
-                    This may take a few minutes depending on video length.
+                    {processingStatus === 'processing' && 'Video is being processed on Memories.ai servers. This typically takes 2-5 minutes.'}
+                    {processingStatus === 'transcribing' && 'Processing complete! Now fetching transcription...'}
+                    {processingStatus === 'completed' && 'All done! Check the results below.'}
                   </p>
                 </div>
               </div>
