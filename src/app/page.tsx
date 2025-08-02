@@ -52,6 +52,12 @@ export default function HomePage() {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
+              <a
+                href="/conversation"
+                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Conversations
+              </a>
               <button
                 onClick={() => setShowApiInfo(!showApiInfo)}
                 className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
@@ -203,48 +209,7 @@ export default function HomePage() {
             </div>
           </div>
         )}
-
-        {/* Features Overview */}
-        <div className="mt-12 grid md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex items-center mb-3">
-              <svg className="w-6 h-6 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              <h3 className="text-lg font-medium text-gray-900">Easy Upload</h3>
-            </div>
-            <p className="text-gray-600">
-              Drag and drop multiple video files or browse to select them. 
-              Real-time progress tracking with detailed feedback.
-            </p>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex items-center mb-3">
-              <svg className="w-6 h-6 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h3 className="text-lg font-medium text-gray-900">Format Support</h3>
-            </div>
-            <p className="text-gray-600">
-              Supports popular video formats including MP4, MOV, AVI, WebM, 
-              and OGG with automatic validation.
-            </p>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex items-center mb-3">
-              <svg className="w-6 h-6 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              <h3 className="text-lg font-medium text-gray-900">AI Analysis</h3>
-            </div>
-            <p className="text-gray-600">
-              Leverage Memories.ai&apos;s powerful video understanding capabilities 
-              for content analysis and insights.
-            </p>
-          </div>
-        </div>
+    
       </main>
 
       {/* Footer */}
