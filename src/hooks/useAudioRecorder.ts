@@ -49,7 +49,7 @@ export const useAudioRecorder = (
   const updateAudioLevel = useCallback(() => {
     if (!analyserRef.current || !dataArrayRef.current) return;
 
-    analyserRef.current.getByteFrequencyData(dataArrayRef.current);
+    analyserRef.current.getByteFrequencyData(dataArrayRef.current as Uint8Array<ArrayBuffer>);
     const average = dataArrayRef.current.reduce((a, b) => a + b) / dataArrayRef.current.length;
     const normalizedLevel = average / 255;
 
@@ -121,7 +121,7 @@ export const useAudioRecorder = (
       }));
       throw error;
     }
-  }, [sampleRate, echoCancellation, noiseSuppression, onAudioData]);
+  }, [sampleRate, echoCancellation, noiseSuppression, onAudioData, connectionCheck]);
 
   const startRecording = useCallback(async () => {
     if (!mediaRecorderRef.current || !state.isInitialized) {

@@ -2,13 +2,16 @@
 
 import React, { useState } from 'react';
 import VideoUpload from '@/components/VideoUpload';
-import { VideoUploadResponse, VideoTranscriptionResponse } from '@/types/memories';
+import EmergencyResponse from '@/components/EmergencyResponse';
+import { VideoUploadResponse, VideoTranscriptionResponse, VideoChatMessage } from '@/types/memories';
 
 export default function HomePage() {
   const [uploadResults, setUploadResults] = useState<VideoUploadResponse[]>([]);
   const [transcriptions, setTranscriptions] = useState<{[videoNo: string]: VideoTranscriptionResponse}>({});
   const [processingStatus, setProcessingStatus] = useState<{[videoNo: string]: string}>({});
   const [showApiInfo, setShowApiInfo] = useState(false);
+  const [chatMessages, setChatMessages] = useState<VideoChatMessage[]>([]);
+  const [analysisReport, setAnalysisReport] = useState<string>('');
 
   const handleUploadComplete = (result: VideoUploadResponse) => {
     setUploadResults(prev => [...prev, result]);
@@ -40,6 +43,24 @@ export default function HomePage() {
     // For now, we'll track overall status. In a real app, you might want to track per video
   };
 
+  const handleChatMessage = (message: VideoChatMessage) => {
+    console.log('Chat message received:', message);
+    setChatMessages(prev => [...prev, message]);
+    
+    // Extract content messages for the emergency report
+    if (message.type === 'content') {
+      setAnalysisReport(prev => prev + '\n\n' + message.content);
+    }
+  };
+
+  const handleChatComplete = () => {
+    console.log('Chat completed');
+  };
+
+  const handleChatError = (error: string) => {
+    console.error('Chat error:', error);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -52,12 +73,6 @@ export default function HomePage() {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
-              <a
-                href="/conversation"
-                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Conversations
-              </a>
               <button
                 onClick={() => setShowApiInfo(!showApiInfo)}
                 className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
@@ -127,14 +142,17 @@ export default function HomePage() {
               onTranscriptionComplete={handleTranscriptionComplete}
               onTranscriptionError={handleTranscriptionError}
               onProcessingStatusChange={handleProcessingStatusChange}
+              onChatMessage={handleChatMessage}
+              onChatComplete={handleChatComplete}
+              onChatError={handleChatError}
               multiple={true}
               maxFileSize={500 * 1024 * 1024} // 500MB
               autoTranscribe={true}
             />
           </div>
 
-          {/* Upload Results - Takes up 1/4 of the width */}
-          <div className="lg:col-span-1">
+          {/* Upload Results & Emergency Response - Takes up 1/4 of the width */}
+          <div className="lg:col-span-1 space-y-6">
             {uploadResults.length > 0 && (
               <div className="bg-white rounded-lg shadow-lg overflow-hidden sticky top-8">
                 <div className="p-4">
@@ -195,6 +213,11 @@ export default function HomePage() {
                 </div>
               </div>
             )}
+            
+            {/* Emergency Response Component */}
+            <div className="sticky top-8">
+              <EmergencyResponse accidentReport={analysisReport.trim()} />
+            </div>
           </div>
         </div>
     

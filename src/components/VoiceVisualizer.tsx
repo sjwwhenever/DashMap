@@ -16,7 +16,7 @@ export default function VoiceVisualizer({
   color = '#3B82F6'
 }: VoiceVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | null>(null);
 
   const sizeConfig = {
     small: { width: 100, height: 60, bars: 12 },

@@ -49,7 +49,7 @@ export const usePCMAudioRecorder = (
   const updateAudioLevel = useCallback(() => {
     if (!analyserRef.current || !dataArrayRef.current) return;
 
-    analyserRef.current.getByteFrequencyData(dataArrayRef.current);
+    analyserRef.current.getByteFrequencyData(dataArrayRef.current as Uint8Array<ArrayBuffer>);
     const average = dataArrayRef.current.reduce((a, b) => a + b) / dataArrayRef.current.length;
     const normalizedLevel = average / 255;
 

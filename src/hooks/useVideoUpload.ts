@@ -160,7 +160,13 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
             
             if (message.type === 'thinking') {
               // For thinking messages, always override the last thinking message if it exists
-              const lastThinkingIndex = newMessages.findLastIndex(msg => msg.type === 'thinking');
+              let lastThinkingIndex = -1;
+              for (let i = newMessages.length - 1; i >= 0; i--) {
+                if (newMessages[i].type === 'thinking') {
+                  lastThinkingIndex = i;
+                  break;
+                }
+              }
               if (lastThinkingIndex !== -1) {
                 // Override the existing thinking message
                 newMessages[lastThinkingIndex] = message;
