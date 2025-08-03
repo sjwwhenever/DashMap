@@ -15,17 +15,15 @@ const DashMapFooter: React.FC = () => {
           {/* Company Info */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center mb-4">
-              <div 
-                className="w-8 h-8 rounded-lg mr-3 flex items-center justify-center text-white font-bold text-sm"
-                style={{ backgroundColor: colors.primary }}
-              >
-                DM
-              </div>
+              <img 
+                src="/Icon/Icon256.png"
+                alt="DashMap Logo"
+                className="w-8 h-8 rounded-lg mr-3 object-contain"
+              />
               <h3 className="text-xl font-bold text-gray-900">DashMap</h3>
             </div>
             <p className="text-gray-600 text-sm leading-relaxed max-w-md">
-              Advanced video processing and analysis platform for emergency response and incident management. 
-              Empowering first responders with AI-driven insights and real-time data processing.
+            Cycling co-pilot for navigation, safety, and emergencies
             </p>
             <div className="flex space-x-4 mt-6">
               <a 
@@ -79,11 +77,6 @@ const DashMapFooter: React.FC = () => {
                   Analytics
                 </a>
               </li>
-              <li>
-                <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                  API Documentation
-                </a>
-              </li>
             </ul>
           </div>
 
@@ -103,11 +96,7 @@ const DashMapFooter: React.FC = () => {
                   Contact Us
                 </a>
               </li>
-              <li>
-                <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                  Status Page
-                </a>
-              </li>
+
               <li>
                 <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
                   Security
@@ -139,11 +128,11 @@ const DashMapFooter: React.FC = () => {
             <div className="flex items-center mt-4 md:mt-0">
               <span className="text-sm text-gray-500 mr-2">Powered by</span>
               <div className="flex items-center space-x-1 text-sm text-gray-600">
-                <span>Next.js</span>
+                <span>Memories.ai</span>
                 <span className="text-gray-400">•</span>
-                <span>TypeScript</span>
+                <span>ElevenLabs</span>
                 <span className="text-gray-400">•</span>
-                <span>Tailwind CSS</span>
+                <span>Anthropic</span>
               </div>
             </div>
           </div>

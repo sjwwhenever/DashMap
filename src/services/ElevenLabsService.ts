@@ -92,40 +92,10 @@ export class ElevenLabsService {
         family: `Hi, I'm calling to inform you about a bike accident that occurred. I have all the details about what happened, the current situation, and everyone's safety status. Let me share the complete information with you.`,
       };
 
-      const requestBody: CreateAgentRequest = {
-        conversation_config: {
-          agent: {
-            prompt: {
-              prompt: prompt,
-            },
-            first_message:
-              firstMessages[emergencyType] || firstMessages.police,
-            language: "en",
-          },
-          asr: {
-            quality: "high",
-            user_input_audio_format: "pcm_16000",
-          },
-          tts: {
-            quality: "high",
-            output_audio_format: "pcm_16000",
-          },
-          turn_detection: {
-            type: "server_vad",
-            enabled: true,
-            sensitivity: 0.7,
-            timeout_ms: 2000,
-          },
-        },
-        knowledge_base: [
-          {
-            type: "text",
-            name: "comprehensive_incident_report",
-            id: "incident-" + Date.now(),
-            usage_mode: "prompt",
-            text: `BIKE ACCIDENT INCIDENT REPORT
+      const enhancedPrompt = `${prompt}
 
-PRIMARY DETAILS: ${accidentReport}
+BIKE ACCIDENT INCIDENT REPORT:
+${accidentReport}
 
 INFORMATION FOR DIFFERENT RESPONDERS:
 
@@ -165,9 +135,34 @@ IMPORTANT INSTRUCTIONS:
 - If asked for "everything", "summary", or "details", give complete relevant information for your role
 - Do NOT ask follow-up questions unless absolutely critical information is missing
 - Be informative and direct in your responses
-- Provide answers based on this knowledge base without asking what specific details they want`,
+- Provide answers based on this incident report without asking what specific details they want`;
+
+      const requestBody: CreateAgentRequest = {
+        conversation_config: {
+          agent: {
+            prompt: {
+              prompt: enhancedPrompt,
+            },
+            first_message:
+              firstMessages[emergencyType] || firstMessages.police,
+            language: "en",
           },
-        ],
+          asr: {
+            quality: "high",
+            user_input_audio_format: "pcm_16000",
+          },
+          tts: {
+            quality: "high",
+            output_audio_format: "pcm_16000",
+          },
+          turn_detection: {
+            type: "server_vad",
+            enabled: true,
+            sensitivity: 0.7,
+            timeout_ms: 2000,
+          },
+        },
+        knowledge_base: [],
       };
 
       const response = await fetch(`${this.baseUrl}/v1/convai/agents/create`, {
