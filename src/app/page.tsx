@@ -117,43 +117,44 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Video Upload Component - Takes up 3/4 of the width */}
+          <div className="lg:col-span-3">
+            <VideoUpload
+              onUploadComplete={handleUploadComplete}
+              onUploadError={handleUploadError}
+              onUploadProgress={handleUploadProgress}
+              onTranscriptionComplete={handleTranscriptionComplete}
+              onTranscriptionError={handleTranscriptionError}
+              onProcessingStatusChange={handleProcessingStatusChange}
+              multiple={true}
+              maxFileSize={500 * 1024 * 1024} // 500MB
+              autoTranscribe={true}
+            />
+          </div>
 
-        {/* Video Upload Component */}
-        <VideoUpload
-          onUploadComplete={handleUploadComplete}
-          onUploadError={handleUploadError}
-          onUploadProgress={handleUploadProgress}
-          onTranscriptionComplete={handleTranscriptionComplete}
-          onTranscriptionError={handleTranscriptionError}
-          onProcessingStatusChange={handleProcessingStatusChange}
-          multiple={true}
-          maxFileSize={500 * 1024 * 1024} // 500MB
-          autoTranscribe={true}
-        />
-
-        {/* Upload Results */}
-        {uploadResults.length > 0 && (
-          <div className="mt-8">
-            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-              <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                  Upload History ({uploadResults.length})
-                </h3>
-                
-                <div className="space-y-4">
-                  {uploadResults.map((result, index) => {
-                    const videoNo = result.data?.videoNo;
-                    const transcription = videoNo ? transcriptions[videoNo] : null;
-                    
-                    return (
-                      <div key={index} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h4 className="font-medium text-gray-900">
+          {/* Upload Results - Takes up 1/4 of the width */}
+          <div className="lg:col-span-1">
+            {uploadResults.length > 0 && (
+              <div className="bg-white rounded-lg shadow-lg overflow-hidden sticky top-8">
+                <div className="p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Upload History ({uploadResults.length})
+                  </h3>
+                  
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {uploadResults.map((result, index) => {
+                      const videoNo = result.data?.videoNo;
+                      const transcription = videoNo ? transcriptions[videoNo] : null;
+                      
+                      return (
+                        <div key={index} className="border border-gray-200 rounded-lg p-3 text-sm">
+                          <div className="mb-2">
+                            <h4 className="font-medium text-gray-900 text-xs truncate">
                               {result.data?.videoName || `Video ${index + 1}`}
                             </h4>
-                            <p className="text-sm text-gray-600">
-                              Video ID: <code className="bg-gray-100 px-1 rounded">{videoNo || 'N/A'}</code>
+                            <p className="text-xs text-gray-600 truncate">
+                              ID: <code className="bg-gray-100 px-1 rounded text-xs">{videoNo || 'N/A'}</code>
                             </p>
                           </div>
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -164,12 +165,9 @@ export default function HomePage() {
                           }`}>
                             {result.data?.videoStatus || 'Unknown'}
                           </span>
-                        </div>
-                        
-                        <div className="mt-2 space-y-2">
-                          <div className="text-sm">
-                            <span className="font-medium text-gray-700">Upload Status:</span>
-                            <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                          
+                          <div className="mt-2">
+                            <span className={`px-2 py-1 rounded text-xs ${
                               result.code === '0000' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                             }`}>
                               {result.msg || 'Unknown'}
@@ -177,29 +175,28 @@ export default function HomePage() {
                           </div>
                           
                           {result.data?.uploadTime && (
-                            <p className="text-sm text-gray-600">
-                              Upload Time: {new Date(parseInt(result.data.uploadTime)).toLocaleString()}
+                            <p className="text-xs text-gray-600 mt-1">
+                              {new Date(parseInt(result.data.uploadTime)).toLocaleDateString()}
                             </p>
                           )}
                         </div>
-
-                      </div>
-                    );
-                  })}
-                </div>
-                
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <button
-                    onClick={() => setUploadResults([])}
-                    className="px-4 py-2 text-sm text-red-600 hover:text-red-800 transition-colors"
-                  >
-                    Clear History
-                  </button>
+                      );
+                    })}
+                  </div>
+                  
+                  <div className="mt-4 pt-3 border-t border-gray-200">
+                    <button
+                      onClick={() => setUploadResults([])}
+                      className="px-3 py-1 text-xs text-red-600 hover:text-red-800 transition-colors"
+                    >
+                      Clear History
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
     
       </main>
 

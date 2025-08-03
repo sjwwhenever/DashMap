@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { useVideoUpload } from '@/hooks/useVideoUpload';
 import { VideoUploadProps, VideoPreview, VideoChatMessage } from '@/types/memories';
 import { formatFileSize } from '@/lib/memories-api';
@@ -34,7 +35,6 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
   });
 
   const [customPrompt, setCustomPrompt] = useState(defaultReportPrompt);
-  const [isContentExpanded, setIsContentExpanded] = useState(false);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -207,53 +207,23 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
       case 'content':
         return (
           <div key={index} className="bg-green-50 border border-green-200 rounded-md p-4 mb-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center">
-                {isGeneratingReport ? (
-                  <svg className="w-4 h-4 text-green-400 mr-2 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                )}
-                <h5 className="text-green-800 font-medium">
-                  {isGeneratingReport ? 'Generating Analysis...' : 'Analysis Complete'}
-                </h5>
-              </div>
-              
-              {/* Expand/Collapse Button */}
-              {message.content.length > 300 && (
-                <button
-                  onClick={() => setIsContentExpanded(!isContentExpanded)}
-                  className="flex items-center text-green-600 hover:text-green-800 transition-colors text-sm"
-                >
-                  {isContentExpanded ? (
-                    <>
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                      </svg>
-                      Collapse
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                      Expand
-                    </>
-                  )}
-                </button>
+            <div className="flex items-center mb-2">
+              {isGeneratingReport ? (
+                <svg className="w-4 h-4 text-green-400 mr-2 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               )}
+              <h5 className="text-green-800 font-medium">
+                {isGeneratingReport ? 'Generating Analysis...' : 'Analysis Complete'}
+              </h5>
             </div>
             
-            <div 
-              className={`prose prose-sm text-green-700 whitespace-pre-wrap transition-all duration-300 ${
-                isContentExpanded ? '' : 'line-clamp-12'
-              }`}
-            >
-              {message.content}
+            <div className="prose prose-sm max-w-none text-green-700">
+              <ReactMarkdown>{message.content}</ReactMarkdown>
               {isGeneratingReport && (
                 <span className="inline-block w-2 h-4 bg-green-400 ml-1 animate-pulse"></span>
               )}
@@ -325,7 +295,7 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
   );
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="w-full">
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
         <div className="p-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">
