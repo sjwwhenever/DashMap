@@ -112,10 +112,15 @@ export interface VideoUploadProps {
   onTranscriptionComplete?: (transcription: VideoTranscriptionResponse) => void;
   onTranscriptionError?: (error: string) => void;
   onProcessingStatusChange?: (status: 'uploading' | 'processing' | 'transcribing' | 'completed' | 'error') => void;
+  onChatMessage?: (message: VideoChatMessage) => void;
+  onChatComplete?: (messages: VideoChatMessage[]) => void;
+  onChatError?: (error: string) => void;
   acceptedFormats?: string[];
   maxFileSize?: number;
   multiple?: boolean;
   autoTranscribe?: boolean;
+  autoGenerateReport?: boolean;
+  defaultReportPrompt?: string;
 }
 
 // Drag and Drop Types
@@ -158,4 +163,67 @@ export interface VideoTranscriptionResponse {
   };
   success: boolean;
   failed: boolean;
+}
+
+// Video Chat API Types
+export interface VideoChatRequest {
+  video_nos: string[];
+  prompt: string;
+  session_id?: string;
+}
+
+export interface VideoChatMessageBase {
+  type: string;
+  sessionId: string;
+}
+
+export interface VideoChatThinkingMessage extends VideoChatMessageBase {
+  type: 'thinking';
+  title: string;
+  content: string;
+}
+
+export interface VideoChatRefItem {
+  videoNo: string;
+  startTime: number;
+  endTime?: number;
+  type: 'keyframe' | 'visual_ts' | 'audio_ts';
+  text?: string;
+}
+
+export interface VideoChatRefVideo {
+  duration: string | number;
+  video_no: string;
+  video_name: string;
+}
+
+export interface VideoChatRef {
+  video: VideoChatRefVideo;
+  refItems: VideoChatRefItem[];
+}
+
+export interface VideoChatRefMessage extends VideoChatMessageBase {
+  type: 'ref';
+  ref: VideoChatRef[];
+}
+
+export interface VideoChatContentMessage extends VideoChatMessageBase {
+  type: 'content';
+  role: 'assistant';
+  content: string;
+}
+
+export type VideoChatMessage = VideoChatThinkingMessage | VideoChatRefMessage | VideoChatContentMessage;
+
+export interface VideoChatResponse {
+  code: string;
+  data: string | 'Done';
+}
+
+export interface VideoChatState {
+  isGenerating: boolean;
+  messages: VideoChatMessage[];
+  sessionId: string | null;
+  error: string | null;
+  isComplete: boolean;
 }

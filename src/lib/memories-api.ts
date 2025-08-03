@@ -7,6 +7,9 @@ import {
   VideoMetadata,
   VideoAnalysis,
   UploadProgress,
+  VideoChatRequest,
+  VideoChatMessage,
+  VideoChatResponse,
 } from '@/types/memories';
 
 class MemoriesApiClient {
@@ -284,6 +287,107 @@ class MemoriesApiClient {
       success: false,
       error: 'Video processing timeout - max attempts reached',
     };
+  }
+
+  async chatWithVideo(
+    request: VideoChatRequest,
+    onMessage?: (message: VideoChatMessage) => void
+  ): Promise<MemoriesApiResponse<VideoChatMessage[]>> {
+    const url = `${this.config.baseUrl}/serve/api/video/chat`;
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': this.config.apiKey,
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+        },
+        body: JSON.stringify({
+          video_nos: request.video_nos,
+          prompt: request.prompt,
+          session_id: request.session_id,
+        }),
+        signal: this.config.timeout 
+          ? AbortSignal.timeout(this.config.timeout * 5) // Longer timeout for chat
+          : undefined,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const messages: VideoChatMessage[] = [];
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('No response body reader available');
+      }
+
+      let done = false;
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.trim() === '') continue;
+            
+            // Handle final response
+            if (line.trim().toLowerCase() === 'data:"done"') {
+              done = true;
+              break;
+            }
+
+            // Handle streaming data
+            if (line.startsWith('data:')) {
+              const dataStr = line.replace('data:', '').trim();
+              
+              if (dataStr === '"Done"') {
+                done = true;
+                break;
+              }
+
+              try {
+                const messageData = JSON.parse(dataStr);
+                
+                // Check if this is a structured message (thinking, ref, content)
+                if (messageData.type && messageData.sessionId) {
+                  const message = messageData as VideoChatMessage;
+                  messages.push(message);
+                  onMessage?.(message);
+                } else if (messageData.code && messageData.data) {
+                  // Handle final response format
+                  const finalResponse = messageData as VideoChatResponse;
+                  if (finalResponse.data === 'Done') {
+                    done = true;
+                    break;
+                  }
+                }
+              } catch (parseError) {
+                // If it's not JSON, it might be content text
+                // In case the API sends plain text content
+                console.log('Non-JSON streaming content:', dataStr);
+              }
+            }
+          }
+        }
+      }
+
+      return {
+        success: true,
+        data: messages,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Video chat failed',
+      };
+    }
   }
 }
 

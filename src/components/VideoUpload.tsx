@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import { useVideoUpload } from '@/hooks/useVideoUpload';
-import { VideoUploadProps, VideoPreview } from '@/types/memories';
+import { VideoUploadProps, VideoPreview, VideoChatMessage } from '@/types/memories';
 import { formatFileSize } from '@/lib/memories-api';
 
 const VideoUpload: React.FC<VideoUploadProps> = ({
@@ -12,10 +12,15 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
   onTranscriptionComplete,
   onTranscriptionError,
   onProcessingStatusChange,
+  onChatMessage,
+  onChatComplete,
+  onChatError,
   acceptedFormats = ['video/*'],
   maxFileSize = 500 * 1024 * 1024, // 500MB
   multiple = true,
   autoTranscribe = true,
+  autoGenerateReport = true,
+  defaultReportPrompt = 'Please provide a comprehensive summary and analysis of this video content.',
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadMetadata, setUploadMetadata] = useState<{
@@ -28,12 +33,16 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
     tags: '',
   });
 
+  const [customPrompt, setCustomPrompt] = useState(defaultReportPrompt);
+
   const {
     uploadState,
     transcriptionState,
+    chatState,
     previews,
     dragState,
     uploadVideo,
+    generateReport,
     removePreview,
     clearPreviews,
     resetUpload,
@@ -52,6 +61,11 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
     transcription,
     transcriptionError,
     processingStatus,
+    isGeneratingReport,
+    chatMessages,
+    chatSessionId,
+    chatError,
+    isChatComplete,
   } = useVideoUpload({
     onUploadComplete,
     onUploadError,
@@ -59,8 +73,13 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
     onTranscriptionComplete,
     onTranscriptionError,
     onProcessingStatusChange,
+    onChatMessage,
+    onChatComplete,
+    onChatError,
     maxFileSize,
     autoTranscribe,
+    autoGenerateReport,
+    defaultReportPrompt,
   });
 
   const handleUploadClick = () => {
@@ -80,6 +99,12 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
 
   const handleSelectFiles = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleGenerateReport = () => {
+    if (result?.data?.videoNo) {
+      generateReport([result.data.videoNo], customPrompt, chatSessionId || undefined);
+    }
   };
 
   const renderProgressBar = () => {
@@ -130,6 +155,63 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
       />
     </div>
   );
+
+  const renderChatMessage = (message: VideoChatMessage, index: number) => {
+    switch (message.type) {
+      case 'thinking':
+        return (
+          <div key={index} className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-3">
+            <div className="flex items-center mb-2">
+              <svg className="w-4 h-4 text-blue-400 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              <h5 className="text-blue-800 font-medium">{message.title}</h5>
+            </div>
+            <p className="text-blue-700 text-sm">{message.content}</p>
+          </div>
+        );
+        
+      case 'ref':
+        return (
+          <div key={index} className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-3">
+            <h5 className="text-yellow-800 font-medium mb-2">📎 Video References</h5>
+            {message.ref.map((ref, refIndex) => (
+              <div key={refIndex} className="mb-3">
+                <div className="text-sm text-yellow-700 font-medium mb-1">
+                  {ref.video.video_name} (Duration: {ref.video.duration}s)
+                </div>
+                {ref.refItems.map((item, itemIndex) => (
+                  <div key={itemIndex} className="ml-4 text-xs text-yellow-600 mb-1">
+                    <span className="font-mono bg-yellow-100 px-1 rounded">
+                      {item.startTime}s{item.endTime ? `-${item.endTime}s` : ''} ({item.type})
+                    </span>
+                    {item.text && <p className="mt-1 text-yellow-700">{item.text}</p>}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        );
+        
+      case 'content':
+        return (
+          <div key={index} className="bg-green-50 border border-green-200 rounded-md p-4 mb-3">
+            <div className="flex items-center mb-2">
+              <svg className="w-4 h-4 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h5 className="text-green-800 font-medium">Analysis Result</h5>
+            </div>
+            <div className="prose prose-sm text-green-700 whitespace-pre-wrap">
+              {message.content}
+            </div>
+          </div>
+        );
+        
+      default:
+        return null;
+    }
+  };
 
   const renderUploadArea = () => (
     <div
@@ -381,6 +463,94 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Report Generation Section */}
+          {transcription && (
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6 mb-6">
+              <h4 className="text-purple-900 font-medium mb-4">📊 Video Analysis & Report Generation</h4>
+              
+              {/* Custom Prompt Input */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-purple-700 mb-2">
+                  Analysis Prompt
+                </label>
+                <textarea
+                  value={customPrompt}
+                  onChange={(e) => setCustomPrompt(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-purple-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Describe what kind of analysis you want for this video..."
+                  disabled={isGeneratingReport}
+                />
+              </div>
+
+              {/* Generate Report Button */}
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-sm text-purple-600">
+                  {autoGenerateReport ? 'Auto-generation is enabled' : 'Manual generation'}
+                </span>
+                <button
+                  onClick={handleGenerateReport}
+                  disabled={isGeneratingReport || !result?.data?.videoNo}
+                  className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                    isGeneratingReport || !result?.data?.videoNo
+                      ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                      : 'bg-purple-600 text-white hover:bg-purple-700'
+                  }`}
+                >
+                  {isGeneratingReport ? 'Generating...' : 'Generate Report'}
+                </button>
+              </div>
+
+              {/* Chat Error */}
+              {chatError && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+                  <div className="flex">
+                    <svg className="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <p className="text-red-700 font-medium">Report Generation Error</p>
+                      <p className="text-red-600 text-sm mt-1">{chatError}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Chat Messages (Streaming Analysis) */}
+              {chatMessages.length > 0 && (
+                <div className="space-y-3">
+                  <h5 className="text-purple-800 font-medium">Real-time Analysis</h5>
+                  <div className="max-h-96 overflow-y-auto">
+                    {chatMessages.map(renderChatMessage)}
+                  </div>
+                </div>
+              )}
+
+              {/* Completion Status */}
+              {isGeneratingReport && (
+                <div className="bg-purple-100 border border-purple-300 rounded-md p-3">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-purple-500 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <p className="text-purple-700">Generating analysis report...</p>
+                  </div>
+                </div>
+              )}
+
+              {isChatComplete && !isGeneratingReport && (
+                <div className="bg-green-100 border border-green-300 rounded-md p-3">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <p className="text-green-700">Analysis report completed successfully!</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

@@ -9,6 +9,9 @@ import {
   UploadProgress,
   DragDropState,
   VideoPreview,
+  VideoChatMessage,
+  VideoChatState,
+  VideoChatRequest,
 } from '@/types/memories';
 import { createMemoriesApiClient, validateVideoFile } from '@/lib/memories-api';
 
@@ -19,9 +22,14 @@ interface UseVideoUploadOptions {
   onTranscriptionComplete?: (transcription: VideoTranscriptionResponse) => void;
   onTranscriptionError?: (error: string) => void;
   onProcessingStatusChange?: (status: 'uploading' | 'processing' | 'transcribing' | 'completed' | 'error') => void;
+  onChatMessage?: (message: VideoChatMessage) => void;
+  onChatComplete?: (messages: VideoChatMessage[]) => void;
+  onChatError?: (error: string) => void;
   maxFileSize?: number;
   acceptedFormats?: string[];
   autoTranscribe?: boolean;
+  autoGenerateReport?: boolean;
+  defaultReportPrompt?: string;
 }
 
 export function useVideoUpload(options: UseVideoUploadOptions = {}) {
@@ -44,6 +52,14 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
     status: 'idle',
   });
 
+  const [chatState, setChatState] = useState<VideoChatState>({
+    isGenerating: false,
+    messages: [],
+    sessionId: null,
+    error: null,
+    isComplete: false,
+  });
+
   const [previews, setPreviews] = useState<VideoPreview[]>([]);
   const [dragState, setDragState] = useState<DragDropState>({
     isDragging: false,
@@ -64,6 +80,13 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
       transcription: null,
       error: null,
       status: 'idle',
+    });
+    setChatState({
+      isGenerating: false,
+      messages: [],
+      sessionId: null,
+      error: null,
+      isComplete: false,
     });
   }, []);
 
@@ -113,6 +136,56 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
     setPreviews([]);
   }, [previews]);
 
+  const generateReport = useCallback(async (videoNos: string[], prompt: string, sessionId?: string) => {
+    setChatState(prev => ({
+      ...prev,
+      isGenerating: true,
+      error: null,
+      isComplete: false,
+      messages: [],
+    }));
+
+    try {
+      const chatRequest: VideoChatRequest = {
+        video_nos: videoNos,
+        prompt,
+        session_id: sessionId,
+      };
+
+      const response = await apiClient.current.chatWithVideo(
+        chatRequest,
+        (message) => {
+          setChatState(prev => ({
+            ...prev,
+            messages: [...prev.messages, message],
+            sessionId: message.sessionId,
+          }));
+          options.onChatMessage?.(message);
+        }
+      );
+
+      if (response.success && response.data) {
+        setChatState(prev => ({
+          ...prev,
+          isGenerating: false,
+          isComplete: true,
+        }));
+        options.onChatComplete?.(response.data);
+      } else {
+        throw new Error(response.error || 'Failed to generate report');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Report generation failed';
+      setChatState(prev => ({
+        ...prev,
+        isGenerating: false,
+        error: errorMessage,
+        isComplete: false,
+      }));
+      options.onChatError?.(errorMessage);
+    }
+  }, [options]);
+
   const startTranscription = useCallback(async (videoNo: string) => {
     setTranscriptionState(prev => ({
       ...prev,
@@ -151,6 +224,12 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
           
           options.onTranscriptionComplete?.(transcriptionResponse.data);
           options.onProcessingStatusChange?.('completed');
+
+          // Automatically generate report if enabled
+          if (options.autoGenerateReport !== false && transcriptionResponse.data) {
+            const prompt = options.defaultReportPrompt || 'Please provide a comprehensive summary and analysis of this video content.';
+            await generateReport([videoNo], prompt);
+          }
         } else {
           throw new Error(transcriptionResponse.error || 'Failed to get transcription');
         }
@@ -169,7 +248,7 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
       options.onTranscriptionError?.(errorMessage);
       options.onProcessingStatusChange?.('error');
     }
-  }, [options]);
+  }, [options, generateReport]);
 
   const uploadVideo = useCallback(async (
     file: File,
@@ -314,6 +393,7 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
     // State
     uploadState,
     transcriptionState,
+    chatState,
     previews,
     dragState,
     
@@ -321,6 +401,7 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
     uploadVideo,
     uploadMultipleVideos,
     startTranscription,
+    generateReport,
     addFiles,
     removePreview,
     clearPreviews,
@@ -346,5 +427,12 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
     transcription: transcriptionState.transcription,
     transcriptionError: transcriptionState.error,
     processingStatus: transcriptionState.status,
+    
+    // Chat computed values
+    isGeneratingReport: chatState.isGenerating,
+    chatMessages: chatState.messages,
+    chatSessionId: chatState.sessionId,
+    chatError: chatState.error,
+    isChatComplete: chatState.isComplete,
   };
 }
