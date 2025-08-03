@@ -8,6 +8,11 @@ const firaCode = Fira_Code({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'DashMap',
   description: 'DashMap application for video processing and analysis',
+  icons: {
+    icon: '/Icon/Icon256.png',
+    shortcut: '/Icon/Icon256.png',
+    apple: '/Icon/Icon256.png',
+  },
 }
 
 export default function RootLayout({

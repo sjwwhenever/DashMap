@@ -87,9 +87,9 @@ export class ElevenLabsService {
 
       // Create direct first messages that provide information immediately
       const firstMessages: Record<string, string> = {
-        police: `Hello, I'm reporting a bike accident. I have all the incident details including location, time, people involved, and any property damage. I'm ready to provide you with the complete information for your police report.`,
-        ambulance: `Hello, I'm calling about a bike accident with potential injuries. I have detailed information about the incident, injuries sustained, and current medical condition. I can provide you with the complete medical assessment.`,
-        family: `Hi, I'm calling to inform you about a bike accident that occurred. I have all the details about what happened, the current situation, and everyone's safety status. Let me share the complete information with you.`,
+        police: `Hello, I'm reporting a bike accident from DashMap.`,
+        ambulance: `Hello, I'm calling about a bike accident from DashMap.`,
+        family: `Hi, I'm calling to inform you about a bike accident from DashMap.`,
       };
 
       const enhancedPrompt = `${prompt}
