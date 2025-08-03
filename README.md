@@ -1,4 +1,4 @@
-# Memories.ai Video Upload Test App
+# DashMap Video Upload Test App
 
 A Next.js TypeScript application for testing video uploads to the Memories.ai platform. This app provides a clean, responsive interface for uploading videos with drag & drop functionality, progress tracking, and real-time feedback.
 
@@ -33,7 +33,7 @@ A Next.js TypeScript application for testing video uploads to the Memories.ai pl
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd memories-ai-upload
+cd DashMap
 ```
 
 2. Install dependencies:
