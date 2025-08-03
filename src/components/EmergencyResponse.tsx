@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ElevenLabsService from '@/services/ElevenLabsService';
 import AudioManager from '@/utils/AudioManager';
 
@@ -40,12 +40,40 @@ interface EmergencyResponseProps {
 export default function EmergencyResponse({ accidentReport }: EmergencyResponseProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isConversationActive, setIsConversationActive] = useState(false);
   const [currentCall, setCurrentCall] = useState<string | null>(null);
   const [messages, setMessages] = useState<EmergencyMessage[]>([]);
   const [error, setError] = useState("");
+  const [callStartTime, setCallStartTime] = useState<number | null>(null);
+  const [callDuration, setCallDuration] = useState("00:00");
 
   const elevenLabsService = useRef<ElevenLabsService | null>(null);
   const audioManager = useRef<AudioManager | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Timer management functions
+  const startCallTimer = useCallback(() => {
+    const startTime = Date.now();
+    setCallStartTime(startTime);
+    setIsConversationActive(true);
+    
+    timerRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const minutes = Math.floor(elapsed / 60000);
+      const seconds = Math.floor((elapsed % 60000) / 1000);
+      setCallDuration(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+    }, 1000);
+  }, []);
+
+  const stopCallTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    setCallStartTime(null);
+    setCallDuration("00:00");
+    setIsConversationActive(false);
+  }, []);
 
   useEffect(() => {
     // Initialize services
@@ -55,13 +83,21 @@ export default function EmergencyResponse({ accidentReport }: EmergencyResponseP
     // Set up event listeners
     const handleMessage = (message: EmergencyMessage) => {
       setMessages((prev) => [...prev, message]);
+      
+      // Start timer when first message is received (conversation becomes active)
+      if (!isConversationActive && (message.type === 'user' || message.type === 'agent')) {
+        startCallTimer();
+      }
     };
 
     const handleConnectionChange = (connected: boolean) => {
       setIsConnected(connected);
-      if (!connected) {
+      if (connected) {
+        setIsConnecting(false);
+      } else {
         setIsConnecting(false);
         setCurrentCall(null);
+        stopCallTimer();
       }
     };
 
@@ -70,6 +106,7 @@ export default function EmergencyResponse({ accidentReport }: EmergencyResponseP
       setIsConnecting(false);
       setIsConnected(false);
       setCurrentCall(null);
+      stopCallTimer();
     };
 
     elevenLabsService.current.on("message", handleMessage);
@@ -83,8 +120,9 @@ export default function EmergencyResponse({ accidentReport }: EmergencyResponseP
       if (audioManager.current) {
         audioManager.current.cleanup();
       }
+      stopCallTimer();
     };
-  }, []);
+  }, [startCallTimer, stopCallTimer, isConversationActive]);
 
   const handleEmergencyCall = async (emergencyType: string) => {
     if (!accidentReport.trim()) {
@@ -123,37 +161,53 @@ export default function EmergencyResponse({ accidentReport }: EmergencyResponseP
     elevenLabsService.current!.disconnect();
     audioManager.current!.cleanup();
     setMessages([]);
+    stopCallTimer();
+    setError("");
   };
 
   const renderCallStatus = () => {
     if (isConnecting) {
       return (
         <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-4">
-          <div className="flex items-center">
-            <svg className="w-5 h-5 text-blue-400 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            <span className="text-blue-700 font-medium">
-              Connecting to {EMERGENCY_TYPES[currentCall as keyof typeof EMERGENCY_TYPES]?.label}...
-            </span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-blue-400 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              <span className="text-blue-700 font-medium">
+                Connecting to {EMERGENCY_TYPES[currentCall as keyof typeof EMERGENCY_TYPES]?.label}...
+              </span>
+            </div>
+            <button
+              onClick={handleHangUp}
+              className="px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded font-medium text-sm transition-colors"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       );
     }
 
     if (isConnected && currentCall) {
+      const statusText = isConversationActive 
+        ? `📞 Connected to ${EMERGENCY_TYPES[currentCall as keyof typeof EMERGENCY_TYPES]?.label} - ${callDuration}`
+        : `Connected, starting conversation...`;
+      
+      const indicatorColor = isConversationActive ? "bg-green-400" : "bg-yellow-400";
+      
       return (
         <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+              <div className={`w-3 h-3 ${indicatorColor} rounded-full mr-2 animate-pulse`}></div>
               <span className="text-green-700 font-medium">
-                📞 Connected to {EMERGENCY_TYPES[currentCall as keyof typeof EMERGENCY_TYPES]?.label}
+                {statusText}
               </span>
             </div>
             <button
               onClick={handleHangUp}
-              className="text-red-600 hover:text-red-800 font-medium text-sm"
+              className="px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded font-medium text-sm transition-colors"
             >
               Hang Up
             </button>
