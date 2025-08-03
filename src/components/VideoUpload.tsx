@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useVideoUpload } from '@/hooks/useVideoUpload';
 import { VideoUploadProps, VideoPreview, VideoChatMessage } from '@/types/memories';
 import { formatFileSize } from '@/lib/memories-api';
@@ -34,6 +34,8 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
   });
 
   const [customPrompt, setCustomPrompt] = useState(defaultReportPrompt);
+  const [isContentExpanded, setIsContentExpanded] = useState(false);
+  const chatMessagesRef = useRef<HTMLDivElement>(null);
 
   const {
     uploadState,
@@ -81,6 +83,16 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
     autoGenerateReport,
     defaultReportPrompt,
   });
+
+  // Auto-scroll to latest messages during generation
+  useEffect(() => {
+    if (isGeneratingReport && chatMessagesRef.current) {
+      chatMessagesRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'end' 
+      });
+    }
+  }, [chatMessages.length, isGeneratingReport]);
 
   const handleUploadClick = () => {
     if (previews.length > 0) {
@@ -160,14 +172,13 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
     switch (message.type) {
       case 'thinking':
         return (
-          <div key={index} className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-3">
-            <div className="flex items-center mb-2">
+          <div key={index} className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-3">
+            <div className="flex items-center">
               <svg className="w-4 h-4 text-blue-400 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
               <h5 className="text-blue-800 font-medium">{message.title}</h5>
             </div>
-            <p className="text-blue-700 text-sm">{message.content}</p>
           </div>
         );
         
@@ -196,14 +207,56 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
       case 'content':
         return (
           <div key={index} className="bg-green-50 border border-green-200 rounded-md p-4 mb-3">
-            <div className="flex items-center mb-2">
-              <svg className="w-4 h-4 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h5 className="text-green-800 font-medium">Analysis Result</h5>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center">
+                {isGeneratingReport ? (
+                  <svg className="w-4 h-4 text-green-400 mr-2 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+                <h5 className="text-green-800 font-medium">
+                  {isGeneratingReport ? 'Generating Analysis...' : 'Analysis Complete'}
+                </h5>
+              </div>
+              
+              {/* Expand/Collapse Button */}
+              {message.content.length > 300 && (
+                <button
+                  onClick={() => setIsContentExpanded(!isContentExpanded)}
+                  className="flex items-center text-green-600 hover:text-green-800 transition-colors text-sm"
+                >
+                  {isContentExpanded ? (
+                    <>
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                      Collapse
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                      Expand
+                    </>
+                  )}
+                </button>
+              )}
             </div>
-            <div className="prose prose-sm text-green-700 whitespace-pre-wrap">
+            
+            <div 
+              className={`prose prose-sm text-green-700 whitespace-pre-wrap transition-all duration-300 ${
+                isContentExpanded ? '' : 'line-clamp-12'
+              }`}
+            >
               {message.content}
+              {isGeneratingReport && (
+                <span className="inline-block w-2 h-4 bg-green-400 ml-1 animate-pulse"></span>
+              )}
             </div>
           </div>
         );
@@ -395,7 +448,7 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
                     {processingStatus === 'completed' && 'Processing complete!'}
                   </p>
                   <p className="text-blue-600 text-sm mt-1">
-                    {processingStatus === 'processing' && 'Video is being processed on Memories.ai servers. This typically takes 2-5 minutes.'}
+                    {processingStatus === 'processing' && 'Video is being processed on Memories.ai servers. This typically takes 15 to 20 seconds.'}
                     {processingStatus === 'transcribing' && 'Processing complete! Now fetching transcription...'}
                     {processingStatus === 'completed' && 'All done! Check the results below.'}
                   </p>
@@ -471,38 +524,54 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
             <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6 mb-6">
               <h4 className="text-purple-900 font-medium mb-4">📊 Video Analysis & Report Generation</h4>
               
-              {/* Custom Prompt Input */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-purple-700 mb-2">
-                  Analysis Prompt
-                </label>
-                <textarea
-                  value={customPrompt}
-                  onChange={(e) => setCustomPrompt(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-purple-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  placeholder="Describe what kind of analysis you want for this video..."
-                  disabled={isGeneratingReport}
-                />
-              </div>
+              {/* Custom Prompt Input - Only show when auto-generation is disabled */}
+              {!autoGenerateReport && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-purple-700 mb-2">
+                    Analysis Prompt
+                  </label>
+                  <textarea
+                    value={customPrompt}
+                    onChange={(e) => setCustomPrompt(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-purple-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Describe what kind of analysis you want for this video..."
+                    disabled={isGeneratingReport}
+                  />
+                </div>
+              )}
 
-              {/* Generate Report Button */}
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-sm text-purple-600">
-                  {autoGenerateReport ? 'Auto-generation is enabled' : 'Manual generation'}
-                </span>
-                <button
-                  onClick={handleGenerateReport}
-                  disabled={isGeneratingReport || !result?.data?.videoNo}
-                  className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                    isGeneratingReport || !result?.data?.videoNo
-                      ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                      : 'bg-purple-600 text-white hover:bg-purple-700'
-                  }`}
-                >
-                  {isGeneratingReport ? 'Generating...' : 'Generate Report'}
-                </button>
-              </div>
+              {/* Generate Report Button - Only show when auto-generation is disabled */}
+              {!autoGenerateReport && (
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-sm text-purple-600">Manual generation</span>
+                  <button
+                    onClick={handleGenerateReport}
+                    disabled={isGeneratingReport || !result?.data?.videoNo}
+                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                      isGeneratingReport || !result?.data?.videoNo
+                        ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                        : 'bg-purple-600 text-white hover:bg-purple-700'
+                    }`}
+                  >
+                    {isGeneratingReport ? 'Generating...' : 'Generate Report'}
+                  </button>
+                </div>
+              )}
+
+              {/* Auto-generation status */}
+              {autoGenerateReport && (
+                <div className="mb-4 p-3 bg-purple-100 border border-purple-200 rounded-md">
+                  <div className="flex items-center">
+                    <svg className="w-4 h-4 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span className="text-sm text-purple-700">
+                      Auto-analysis is enabled - Report will be generated automatically after transcription
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Chat Error */}
               {chatError && (
@@ -522,32 +591,48 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
               {/* Chat Messages (Streaming Analysis) */}
               {chatMessages.length > 0 && (
                 <div className="space-y-3">
-                  <h5 className="text-purple-800 font-medium">Real-time Analysis</h5>
-                  <div className="max-h-96 overflow-y-auto">
+                  <h5 className="text-purple-800 font-medium flex items-center">
+                    {isGeneratingReport ? (
+                      <>
+                        <svg className="w-4 h-4 text-purple-500 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Real-time Analysis (Streaming...)
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Analysis Results
+                      </>
+                    )}
+                  </h5>
+                  <div ref={chatMessagesRef} className="space-y-2">
                     {chatMessages.map(renderChatMessage)}
                   </div>
                 </div>
               )}
 
-              {/* Completion Status */}
-              {isGeneratingReport && (
+              {/* Completion Status - Only show when no messages to avoid redundancy */}
+              {isGeneratingReport && chatMessages.length === 0 && (
                 <div className="bg-purple-100 border border-purple-300 rounded-md p-3">
                   <div className="flex items-center">
                     <svg className="w-5 h-5 text-purple-500 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
-                    <p className="text-purple-700">Generating analysis report...</p>
+                    <p className="text-purple-700">Initializing analysis...</p>
                   </div>
                 </div>
               )}
 
-              {isChatComplete && !isGeneratingReport && (
-                <div className="bg-green-100 border border-green-300 rounded-md p-3">
+              {isChatComplete && !isGeneratingReport && chatMessages.length > 0 && (
+                <div className="bg-green-100 border border-green-300 rounded-md p-3 mt-3">
                   <div className="flex items-center">
                     <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <p className="text-green-700">Analysis report completed successfully!</p>
+                    <p className="text-green-700">Analysis completed successfully!</p>
                   </div>
                 </div>
               )}

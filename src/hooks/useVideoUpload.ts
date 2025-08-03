@@ -155,11 +155,54 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
       const response = await apiClient.current.chatWithVideo(
         chatRequest,
         (message) => {
-          setChatState(prev => ({
-            ...prev,
-            messages: [...prev.messages, message],
-            sessionId: message.sessionId,
-          }));
+          setChatState(prev => {
+            const newMessages = [...prev.messages];
+            
+            if (message.type === 'thinking') {
+              // For thinking messages, always override the last thinking message if it exists
+              const lastThinkingIndex = newMessages.findLastIndex(msg => msg.type === 'thinking');
+              if (lastThinkingIndex !== -1) {
+                // Override the existing thinking message
+                newMessages[lastThinkingIndex] = message;
+              } else {
+                // Add as new message if no thinking message exists
+                newMessages.push(message);
+              }
+            } else if (message.type === 'content') {
+              // When content starts, remove any thinking messages
+              const filteredMessages = newMessages.filter(msg => msg.type !== 'thinking');
+              // Then add the content message (or combine if last is also content)
+              if (filteredMessages.length > 0) {
+                const lastMessage = filteredMessages[filteredMessages.length - 1];
+                if (lastMessage.type === 'content' && lastMessage.sessionId === message.sessionId) {
+                  // Combine the content
+                  filteredMessages[filteredMessages.length - 1] = {
+                    ...lastMessage,
+                    content: lastMessage.content + message.content,
+                  };
+                } else {
+                  // Add as new message
+                  filteredMessages.push(message);
+                }
+              } else {
+                filteredMessages.push(message);
+              }
+              return {
+                ...prev,
+                messages: filteredMessages,
+                sessionId: message.sessionId,
+              };
+            } else {
+              // For ref messages, always add as new message
+              newMessages.push(message);
+            }
+
+            return {
+              ...prev,
+              messages: newMessages,
+              sessionId: message.sessionId,
+            };
+          });
           options.onChatMessage?.(message);
         }
       );
