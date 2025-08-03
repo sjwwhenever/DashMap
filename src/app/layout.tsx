@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Fira_Code } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 
-const inter = Inter({ subsets: ['latin'] })
+const firaCode = Fira_Code({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'DashMap',
@@ -17,10 +17,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={firaCode.className}>
         <ThemeProvider>
-          <div className="min-h-screen bg-gray-50">
-            {children}
+          <div className="min-h-screen bg-gray-50 flex flex-col">
+            <div className="flex-1">
+              {children}
+            </div>
           </div>
         </ThemeProvider>
       </body>

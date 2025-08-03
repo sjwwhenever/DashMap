@@ -225,8 +225,28 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
               </h5>
             </div>
             
-            <div className="prose prose-sm max-w-none text-green-700">
-              <ReactMarkdown>{message.content}</ReactMarkdown>
+            <div className="prose prose-sm prose-green max-w-none text-green-700">
+              <ReactMarkdown 
+                components={{
+                  h1: ({children}) => <h1 className="text-2xl font-bold text-green-900 mb-4 border-b-2 border-green-300 pb-2">{children}</h1>,
+                  h2: ({children}) => <h2 className="text-xl font-bold text-green-900 mb-3 mt-6">{children}</h2>,
+                  h3: ({children}) => <h3 className="text-lg font-semibold text-green-800 mb-2 mt-4">{children}</h3>,
+                  h4: ({children}) => <h4 className="text-base font-semibold text-green-800 mb-2 mt-3">{children}</h4>,
+                  p: ({children}) => <p className="text-green-700 mb-3 leading-relaxed">{children}</p>,
+                  strong: ({children}) => <strong className="font-bold text-green-900 bg-green-50 px-1 rounded">{children}</strong>,
+                  em: ({children}) => <em className="italic text-green-600 font-medium">{children}</em>,
+                  ul: ({children}) => <ul className="list-disc ml-6 mb-4 text-green-700 space-y-2">{children}</ul>,
+                  ol: ({children}) => <ol className="list-decimal ml-6 mb-4 text-green-700 space-y-2">{children}</ol>,
+                  li: ({children}) => <li className="text-green-700 leading-relaxed">{children}</li>,
+                  code: ({children}) => <code className="bg-green-200 text-green-900 px-2 py-1 rounded font-mono text-sm border border-green-300">{children}</code>,
+                  pre: ({children}) => <pre className="bg-green-100 text-green-900 p-4 rounded-lg text-sm font-mono overflow-x-auto mb-4 border-l-4 border-green-400 shadow-sm">{children}</pre>,
+                  blockquote: ({children}) => <blockquote className="border-l-4 border-green-400 pl-6 py-2 italic text-green-600 mb-4 bg-green-50 rounded-r-md">{children}</blockquote>,
+                  hr: () => <hr className="border-green-300 my-6" />,
+                  a: ({children, href}) => <a href={href} className="text-green-600 underline hover:text-green-800 font-medium">{children}</a>,
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
               {isGeneratingReport && (
                 <span className="inline-block w-2 h-4 bg-green-400 ml-1 animate-pulse"></span>
               )}

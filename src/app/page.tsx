@@ -65,11 +65,11 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       <DashMapHeader />
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Video Upload Component - Takes up 3/4 of the width */}
           <div className="lg:col-span-3">
@@ -158,10 +158,9 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-    
       </main>
 
       <DashMapFooter />
-    </div>
+    </>
   );
 }
