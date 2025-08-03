@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import { useVideoUpload } from '@/hooks/useVideoUpload';
 import { VideoUploadProps, VideoPreview, VideoChatMessage } from '@/types/memories';
 import { formatFileSize } from '@/lib/memories-api';
+import { DEFAULT_VIDEO_REPORT_PROMPT } from '@/constants/reportPrompts';
 
 const VideoUpload: React.FC<VideoUploadProps> = ({
   onUploadComplete,
@@ -18,10 +19,10 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
   onChatError,
   acceptedFormats = ['video/*'],
   maxFileSize = 500 * 1024 * 1024, // 500MB
-  multiple = true,
+  multiple = false,
   autoTranscribe = true,
   autoGenerateReport = true,
-  defaultReportPrompt = 'Please provide a comprehensive summary and analysis of this video content.',
+  defaultReportPrompt = DEFAULT_VIDEO_REPORT_PROMPT,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadMetadata, setUploadMetadata] = useState<{
@@ -158,13 +159,15 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
         </button>
       </div>
       
-      <video
-        src={preview.url}
-        className="w-full h-32 object-cover rounded-md bg-gray-200"
-        controls={false}
-        muted
-        preload="metadata"
-      />
+      <div className="flex justify-center">
+        <video
+          src={preview.url}
+          className="max-w-full h-48 object-contain rounded-md bg-gray-200"
+          controls={false}
+          muted
+          preload="metadata"
+        />
+      </div>
     </div>
   );
 
@@ -255,7 +258,7 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
       <input
         ref={fileInputRef}
         type="file"
-        multiple={multiple}
+        multiple={false}
         accept={acceptedFormats.join(',')}
         onChange={handleFileSelect}
         className="hidden"
@@ -299,7 +302,7 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
         <div className="p-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            Upload Videos to Memories.ai
+            Upload Emergency Videos
           </h2>
 
           {/* Upload Area */}
@@ -325,69 +328,9 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
                 {previews.map(renderVideoPreview)}
               </div>
               
-              {!isUploading && (
-                <div
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-gray-400 transition-colors"
-                  onClick={handleSelectFiles}
-                >
-                  <p className="text-gray-500">Click to add more videos</p>
-                </div>
-              )}
             </div>
           )}
 
-          {/* Upload Metadata Form */}
-          {hasFiles && !result && (
-            <div className="bg-gray-50 rounded-lg p-6 mb-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Video Information
-              </h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Title (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={uploadMetadata.title}
-                    onChange={(e) => setUploadMetadata(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter video title"
-                    disabled={isUploading}
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description (optional)
-                  </label>
-                  <textarea
-                    value={uploadMetadata.description}
-                    onChange={(e) => setUploadMetadata(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter video description"
-                    disabled={isUploading}
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tags (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={uploadMetadata.tags}
-                    onChange={(e) => setUploadMetadata(prev => ({ ...prev, tags: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter tags separated by commas"
-                    disabled={isUploading}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Progress Bar */}
           {isUploading && renderProgressBar()}

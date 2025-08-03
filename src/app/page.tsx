@@ -3,13 +3,16 @@
 import React, { useState } from 'react';
 import VideoUpload from '@/components/VideoUpload';
 import EmergencyResponse from '@/components/EmergencyResponse';
+import DashMapHeader from '@/components/DashMapHeader';
+import DashMapFooter from '@/components/DashMapFooter';
 import { VideoUploadResponse, VideoTranscriptionResponse, VideoChatMessage } from '@/types/memories';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function HomePage() {
+  const { colors } = useTheme();
   const [uploadResults, setUploadResults] = useState<VideoUploadResponse[]>([]);
   const [transcriptions, setTranscriptions] = useState<{[videoNo: string]: VideoTranscriptionResponse}>({});
   const [processingStatus, setProcessingStatus] = useState<{[videoNo: string]: string}>({});
-  const [showApiInfo, setShowApiInfo] = useState(false);
   const [chatMessages, setChatMessages] = useState<VideoChatMessage[]>([]);
   const [analysisReport, setAnalysisReport] = useState<string>('');
 
@@ -63,72 +66,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">
-                Memories.ai Video Upload Test
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setShowApiInfo(!showApiInfo)}
-                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                API Info
-              </button>
-              <a
-                href="https://memories.ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
-              >
-                memories.ai →
-              </a>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* API Information Panel */}
-      {showApiInfo && (
-        <div className="bg-blue-50 border-b border-blue-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900 mb-3">
-                API Configuration
-              </h3>
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <h4 className="font-medium text-gray-700 mb-2">Environment Variables</h4>
-                  <ul className="space-y-1 text-gray-600">
-                    <li><code className="bg-gray-100 px-2 py-1 rounded">NEXT_PUBLIC_MEMORIES_API_URL</code></li>
-                    <li><code className="bg-gray-100 px-2 py-1 rounded">MEMORIES_API_KEY</code></li>
-                    <li><code className="bg-gray-100 px-2 py-1 rounded">NEXT_PUBLIC_MAVI_API_URL</code></li>
-                    <li><code className="bg-gray-100 px-2 py-1 rounded">MAVI_API_KEY</code></li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-700 mb-2">Current Configuration</h4>
-                  <ul className="space-y-1 text-gray-600">
-                    <li>API URL: {process.env.NEXT_PUBLIC_MEMORIES_API_URL || 'https://api.memories.ai'}</li>
-                    <li>API Key: {process.env.MEMORIES_API_KEY ? '••••••••' : 'Not configured'}</li>
-                    <li>Timeout: 30 seconds</li>
-                    <li>Max File Size: 500MB</li>
-                  </ul>
-                </div>
-              </div>
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                <p className="text-sm text-yellow-800">
-                  <strong>Note:</strong> Copy <code>.env.local.example</code> to <code>.env.local</code> and add your API keys to test with the real API.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <DashMapHeader />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -223,20 +161,7 @@ export default function HomePage() {
     
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center text-gray-600">
-            <p>
-              Built with Next.js and TypeScript for testing{' '}
-              <a href="https://memories.ai" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
-                Memories.ai
-              </a>{' '}
-              video upload functionality.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <DashMapFooter />
     </div>
   );
 }

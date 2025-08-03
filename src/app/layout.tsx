@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Memories.ai Video Upload Test',
-  description: 'Test application for uploading videos to Memories.ai',
+  title: 'DashMap',
+  description: 'DashMap application for video processing and analysis',
 }
 
 export default function RootLayout({
@@ -17,9 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <div className="min-h-screen bg-gray-50">
-          {children}
-        </div>
+        <ThemeProvider>
+          <div className="min-h-screen bg-gray-50">
+            {children}
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   )
